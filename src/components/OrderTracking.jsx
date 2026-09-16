@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
+import DeliveryMap from "./DeliveryMap";
 import {
   STEPS,
   SCENARIOS,
   formatEta,
+  getDeliveryProgress,
   getCurrentStep,
   getElapsedSimMinutes,
   getEta,
@@ -13,6 +15,8 @@ const LAST_STEP = STEPS.length - 1;
 
 export default function OrderTracking({ session }) {
   const { scenario, startedAt, order } = session;
+  const variant = session.variant ?? "with_map";
+  const showMapSlot = variant === "with_map";
   const [elapsed, setElapsed] = useState(() => getElapsedSimMinutes(startedAt));
   const step = getCurrentStep(scenario, elapsed);
   const previousStep = useRef(step);
@@ -30,6 +34,7 @@ export default function OrderTracking({ session }) {
     const opening = getEta(scenario, getElapsedSimMinutes(startedAt));
     track("tracking_screen_viewed", {
       scenario_id: scenario,
+      variant,
       eta_min: opening.initialMin,
       eta_max: opening.initialMax,
       confidence: opening.confidence,
@@ -43,7 +48,7 @@ export default function OrderTracking({ session }) {
     }
     window.addEventListener("pagehide", handleExit);
     return () => window.removeEventListener("pagehide", handleExit);
-  }, [scenario, startedAt]);
+  }, [scenario, startedAt, variant]);
 
   useEffect(() => {
     if (step === previousStep.current) return;
@@ -52,8 +57,14 @@ export default function OrderTracking({ session }) {
       to_step: STEPS[step].title,
       elapsed_simulated_minutes: SCENARIOS[scenario].stepStarts[step],
     });
+    if (step === 2 && showMapSlot) {
+      track("tracking_map_shown", {
+        variant,
+        elapsed_simulated_minutes: SCENARIOS[scenario].stepStarts[step],
+      });
+    }
     previousStep.current = step;
-  }, [scenario, step]);
+  }, [scenario, step, showMapSlot, variant]);
 
   // Fire once when the re-estimation happens on screen (not on reload).
   useEffect(() => {
@@ -113,8 +124,12 @@ export default function OrderTracking({ session }) {
           })}
         </ol>
 
-        {/* Reserved for spec 03 (map). */}
-        <div className="tracking-slot tracking-slot--map" />
+        {/* Map space is reserved from the start so it never pushes content. */}
+        {showMapSlot && (
+          <div className="tracking-map-slot">
+            {step >= 2 && <DeliveryMap progress={getDeliveryProgress(scenario, elapsed)} />}
+          </div>
+        )}
       </section>
 
       <section className="tracking-card">

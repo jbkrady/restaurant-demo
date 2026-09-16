@@ -4,7 +4,7 @@ import Menu from "./components/Menu";
 import Cart from "./components/Cart";
 import PaymentModal from "./components/PaymentModal";
 import OrderTracking from "./components/OrderTracking";
-import { SCENARIOS, loadSession, saveSession, clearSession } from "./tracking";
+import { SCENARIOS, VARIANTS, loadSession, saveSession, clearSession } from "./tracking";
 import "./App.css";
 
 export default function App() {
@@ -13,6 +13,7 @@ export default function App() {
   const [showPayment, setShowPayment] = useState(false);
   const [session, setSession] = useState(loadSession);
   const [scenario, setScenario] = useState("S1");
+  const [variant, setVariant] = useState("with_map");
 
   function addToCart(dish) {
     setCart([...cart, { ...dish, quantity: 1 }]);
@@ -23,7 +24,7 @@ export default function App() {
   }
 
   function handlePaid(order) {
-    const next = { scenario, startedAt: Date.now(), order };
+    const next = { scenario, variant, startedAt: Date.now(), order };
     saveSession(next);
     setSession(next);
     setCart([]);
@@ -89,6 +90,16 @@ export default function App() {
         >
           {Object.entries(SCENARIOS).map(([id, s]) => (
             <option key={id} value={id}>{s.label}</option>
+          ))}
+        </select>
+        <select
+          value={session ? session.variant : variant}
+          onChange={(e) => setVariant(e.target.value)}
+          disabled={Boolean(session)}
+          aria-label="Prototype variant"
+        >
+          {Object.entries(VARIANTS).map(([id, label]) => (
+            <option key={id} value={id}>{label}</option>
           ))}
         </select>
         <button type="button" onClick={resetSession}>Reset</button>
