@@ -732,8 +732,34 @@ body {
   100% { box-shadow: 0 0 0 12px rgba(0, 193, 178, 0); }
 }
 
-/* Reserved space for spec 02 (ETA) and spec 03 (map) */
-.tracking-slot--eta { height: 0; }
+/* Reserved space for spec 03 (map) */
+.tracking-eta {
+  height: 64px;
+  margin-bottom: 20px;
+}
+
+.tracking-eta-value {
+  display: inline-block;
+  font-size: 1.5rem;
+  font-weight: 800;
+  border-radius: 6px;
+}
+
+.tracking-eta-value--revised {
+  animation: tracking-flash 2.4s ease-out;
+}
+
+.tracking-eta-note {
+  margin-top: 4px;
+  font-size: 0.85rem;
+  color: #b45309;
+}
+
+@keyframes tracking-flash {
+  0%, 30% { background: #fde68a; box-shadow: 0 0 0 6px #fde68a; }
+  100% { background: transparent; box-shadow: 0 0 0 6px transparent; }
+}
+
 .tracking-slot--map { height: 0; }
 
 /* ─── Facilitator bar ────────────────────────────────── */
