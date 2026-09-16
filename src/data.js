@@ -1,6 +1,6 @@
 export const deliveryInfo = {
   etaMin: 25,
-  etaMax: 35, // average delivery estimate, in minutes
+  etaMax: 40, // 36 min central estimate x0.70 / x1.10, in minutes
 };
 
 export const dishes = [

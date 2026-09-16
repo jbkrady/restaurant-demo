@@ -9,10 +9,16 @@ export const STEPS = [
   { title: "Delivered", text: "Enjoy your meal" },
 ];
 
-// Simulated minute at which each step starts.
+// Simulated minute at which each step starts, and central delivery estimate
+// (preparation + pickup + travel). S2 revises the estimate at `reestimate.at`.
 export const SCENARIOS = {
-  S1: { label: "S1 · nominal", stepStarts: [0, 1, 19, 37] },
-  S2: { label: "S2 · delay", stepStarts: [0, 1, 31, 49], reestimateAt: 20 },
+  S1: { label: "S1 · nominal", stepStarts: [0, 1, 19, 37], central: 36 },
+  S2: {
+    label: "S2 · delay",
+    stepStarts: [0, 1, 31, 49],
+    central: 36,
+    reestimate: { at: 20, central: 48 },
+  },
 };
 
 // 1 simulated minute = 10 real seconds.
@@ -29,6 +35,34 @@ export function getCurrentStep(scenarioId, elapsedSimMinutes) {
     if (elapsedSimMinutes >= start) step = i;
   });
   return step;
+}
+
+// Same asymmetric margin as the pre-order estimate: x0.70 low, x1.10 high.
+export function getEtaRange(central) {
+  return { min: Math.round(central * 0.7), max: Math.round(central * 1.1) };
+}
+
+// Remaining range at a given simulated minute, counted down minute by minute.
+export function getEta(scenarioId, elapsedSimMinutes) {
+  const { central, reestimate } = SCENARIOS[scenarioId];
+  const delayed = Boolean(reestimate) && elapsedSimMinutes >= reestimate.at;
+  const range = getEtaRange(delayed ? reestimate.central : central);
+  const minutes = Math.floor(elapsedSimMinutes);
+  return {
+    min: range.min - minutes,
+    max: range.max - minutes,
+    initialMin: range.min,
+    initialMax: range.max,
+    confidence: delayed ? "medium" : "high",
+    delayed,
+  };
+}
+
+export function formatEta(eta) {
+  if (eta.max <= 0) return "Running a little late";
+  if (eta.max <= 5) return "Any minute now";
+  if (eta.min <= 0) return `Arriving in less than ${eta.max} min`;
+  return `Arriving in ${eta.min}–${eta.max} min`;
 }
 
 const STORAGE_KEY = "restaurant-demo:tracking";

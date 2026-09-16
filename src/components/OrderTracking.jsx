@@ -1,5 +1,13 @@
 import { useEffect, useRef, useState } from "react";
-import { STEPS, SCENARIOS, getCurrentStep, getElapsedSimMinutes, track } from "../tracking";
+import {
+  STEPS,
+  SCENARIOS,
+  formatEta,
+  getCurrentStep,
+  getElapsedSimMinutes,
+  getEta,
+  track,
+} from "../tracking";
 
 const LAST_STEP = STEPS.length - 1;
 
@@ -8,6 +16,8 @@ export default function OrderTracking({ session }) {
   const [elapsed, setElapsed] = useState(() => getElapsedSimMinutes(startedAt));
   const step = getCurrentStep(scenario, elapsed);
   const previousStep = useRef(step);
+  const eta = getEta(scenario, elapsed);
+  const wasDelayed = useRef(eta.delayed);
 
   // Recompute from the clock every second; stop once delivered.
   useEffect(() => {
@@ -17,7 +27,13 @@ export default function OrderTracking({ session }) {
   }, [startedAt, step]);
 
   useEffect(() => {
-    track("tracking_screen_viewed", { scenario_id: scenario });
+    const opening = getEta(scenario, getElapsedSimMinutes(startedAt));
+    track("tracking_screen_viewed", {
+      scenario_id: scenario,
+      eta_min: opening.initialMin,
+      eta_max: opening.initialMax,
+      confidence: opening.confidence,
+    });
     function handleExit() {
       const minutes = getElapsedSimMinutes(startedAt);
       track("tracking_screen_exited", {
@@ -39,6 +55,27 @@ export default function OrderTracking({ session }) {
     previousStep.current = step;
   }, [scenario, step]);
 
+  // Fire once when the re-estimation happens on screen (not on reload).
+  useEffect(() => {
+    if (!eta.delayed || wasDelayed.current) return;
+    wasDelayed.current = true;
+    const { reestimate } = SCENARIOS[scenario];
+    const before = getEta(scenario, reestimate.at - 1);
+    track("tracking_eta_extended", {
+      old_min: before.initialMin,
+      old_max: before.initialMax,
+      new_min: eta.initialMin,
+      new_max: eta.initialMax,
+      confidence_after: eta.confidence,
+      elapsed_simulated_minutes: reestimate.at,
+    });
+  }, [scenario, eta]);
+
+  const delivered = step === LAST_STEP;
+  const deliveredAt = new Date(
+    startedAt + SCENARIOS[scenario].stepStarts[LAST_STEP] * 60000
+  ).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+
   const formattedTime = new Date(order.orderTime).toLocaleString("en-GB", {
     day: "numeric",
     month: "short",
@@ -53,6 +90,17 @@ export default function OrderTracking({ session }) {
         <h2 className="tracking-title">Your order</h2>
         <p className="tracking-current" aria-live="polite">{STEPS[step].text}</p>
 
+        <div className="tracking-eta" aria-live="polite">
+          <p key={eta.delayed ? "revised" : "initial"} className={`tracking-eta-value${eta.delayed ? " tracking-eta-value--revised" : ""}`}>
+            {delivered ? `Delivered at ${deliveredAt}` : formatEta(eta)}
+          </p>
+          {!delivered && eta.delayed && (
+            <p className="tracking-eta-note">
+              The restaurant is busier than expected · Estimate less precise than usual
+            </p>
+          )}
+        </div>
+
         <ol className="tracking-steps">
           {STEPS.map((s, i) => {
             const state = i < step || step === LAST_STEP ? "done" : i === step ? "current" : "upcoming";
@@ -65,8 +113,7 @@ export default function OrderTracking({ session }) {
           })}
         </ol>
 
-        {/* Reserved at final size for spec 02 (ETA) and spec 03 (map). */}
-        <div className="tracking-slot tracking-slot--eta" />
+        {/* Reserved for spec 03 (map). */}
         <div className="tracking-slot tracking-slot--map" />
       </section>
 
