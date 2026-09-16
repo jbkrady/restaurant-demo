@@ -4,7 +4,7 @@ import Menu from "./components/Menu";
 import Cart from "./components/Cart";
 import PaymentModal from "./components/PaymentModal";
 import OrderTracking from "./components/OrderTracking";
-import { SCENARIOS, VARIANTS, loadSession, saveSession, clearSession } from "./tracking";
+import { SCENARIOS, SPEEDS, TIME_FACTOR, VARIANTS, loadSession, saveSession, clearSession } from "./tracking";
 import "./App.css";
 
 export default function App() {
@@ -14,6 +14,7 @@ export default function App() {
   const [session, setSession] = useState(loadSession);
   const [scenario, setScenario] = useState("S1");
   const [variant, setVariant] = useState("with_map");
+  const [timeFactor, setTimeFactor] = useState(TIME_FACTOR);
 
   function addToCart(dish) {
     setCart([...cart, { ...dish, quantity: 1 }]);
@@ -24,7 +25,7 @@ export default function App() {
   }
 
   function handlePaid(order) {
-    const next = { scenario, variant, startedAt: Date.now(), order };
+    const next = { scenario, variant, timeFactor, startedAt: Date.now(), order };
     saveSession(next);
     setSession(next);
     setCart([]);
@@ -100,6 +101,16 @@ export default function App() {
         >
           {Object.entries(VARIANTS).map(([id, label]) => (
             <option key={id} value={id}>{label}</option>
+          ))}
+        </select>
+        <select
+          value={session ? session.timeFactor ?? TIME_FACTOR : timeFactor}
+          onChange={(e) => setTimeFactor(Number(e.target.value))}
+          disabled={Boolean(session)}
+          aria-label="Speed"
+        >
+          {Object.entries(SPEEDS).map(([factor, label]) => (
+            <option key={factor} value={factor}>{label}</option>
           ))}
         </select>
         <button type="button" onClick={resetSession}>Reset</button>
