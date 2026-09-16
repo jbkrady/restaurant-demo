@@ -21,6 +21,20 @@ export const SCENARIOS = {
   },
 };
 
+// Prototype variants, alternated between participants (spec 03).
+export const VARIANTS = {
+  with_map: "With map",
+  no_map: "No map",
+};
+
+// Share of the "On its way" step already travelled, from 0 to 1.
+export function getDeliveryProgress(scenarioId, elapsedSimMinutes) {
+  const { stepStarts } = SCENARIOS[scenarioId];
+  const start = stepStarts[2];
+  const end = stepStarts[3];
+  return Math.min(Math.max((elapsedSimMinutes - start) / (end - start), 0), 1);
+}
+
 // 1 simulated minute = 10 real seconds.
 export const TIME_FACTOR = 6;
 
