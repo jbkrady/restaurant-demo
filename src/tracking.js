@@ -35,11 +35,17 @@ export function getDeliveryProgress(scenarioId, elapsedSimMinutes) {
   return Math.min(Math.max((elapsedSimMinutes - start) / (end - start), 0), 1);
 }
 
-// 1 simulated minute = 10 real seconds.
+// Time acceleration. x6 (1 simulated minute = 10 real seconds) is the
+// user-test setting; faster speeds are for demos only.
+export const SPEEDS = {
+  6: "Test ×6",
+  30: "Demo ×30",
+  60: "Demo ×60",
+};
 export const TIME_FACTOR = 6;
 
-export function getElapsedSimMinutes(startedAt, now = Date.now()) {
-  return ((now - startedAt) / 60000) * TIME_FACTOR;
+export function getElapsedSimMinutes(startedAt, timeFactor = TIME_FACTOR, now = Date.now()) {
+  return ((now - startedAt) / 60000) * timeFactor;
 }
 
 export function getCurrentStep(scenarioId, elapsedSimMinutes) {

@@ -3,6 +3,7 @@ import DeliveryMap from "./DeliveryMap";
 import {
   STEPS,
   SCENARIOS,
+  TIME_FACTOR,
   formatEta,
   getDeliveryProgress,
   getCurrentStep,
@@ -16,8 +17,9 @@ const LAST_STEP = STEPS.length - 1;
 export default function OrderTracking({ session }) {
   const { scenario, startedAt, order } = session;
   const variant = session.variant ?? "with_map";
+  const timeFactor = session.timeFactor ?? TIME_FACTOR;
   const showMapSlot = variant === "with_map";
-  const [elapsed, setElapsed] = useState(() => getElapsedSimMinutes(startedAt));
+  const [elapsed, setElapsed] = useState(() => getElapsedSimMinutes(startedAt, timeFactor));
   const step = getCurrentStep(scenario, elapsed);
   const previousStep = useRef(step);
   const eta = getEta(scenario, elapsed);
@@ -26,12 +28,12 @@ export default function OrderTracking({ session }) {
   // Recompute from the clock every second; stop once delivered.
   useEffect(() => {
     if (step === LAST_STEP) return;
-    const timer = setInterval(() => setElapsed(getElapsedSimMinutes(startedAt)), 1000);
+    const timer = setInterval(() => setElapsed(getElapsedSimMinutes(startedAt, timeFactor)), 1000);
     return () => clearInterval(timer);
-  }, [startedAt, step]);
+  }, [startedAt, step, timeFactor]);
 
   useEffect(() => {
-    const opening = getEta(scenario, getElapsedSimMinutes(startedAt));
+    const opening = getEta(scenario, getElapsedSimMinutes(startedAt, timeFactor));
     track("tracking_screen_viewed", {
       scenario_id: scenario,
       variant,
@@ -40,7 +42,7 @@ export default function OrderTracking({ session }) {
       confidence: opening.confidence,
     });
     function handleExit() {
-      const minutes = getElapsedSimMinutes(startedAt);
+      const minutes = getElapsedSimMinutes(startedAt, timeFactor);
       track("tracking_screen_exited", {
         step_at_exit: STEPS[getCurrentStep(scenario, minutes)].title,
         elapsed_simulated_minutes: Math.round(minutes),
@@ -48,7 +50,7 @@ export default function OrderTracking({ session }) {
     }
     window.addEventListener("pagehide", handleExit);
     return () => window.removeEventListener("pagehide", handleExit);
-  }, [scenario, startedAt, variant]);
+  }, [scenario, startedAt, variant, timeFactor]);
 
   useEffect(() => {
     if (step === previousStep.current) return;
